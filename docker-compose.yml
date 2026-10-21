@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: nyaya
+      POSTGRES_PASSWORD: nyaya
+      POSTGRES_DB: nyayasetu
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U nyaya -d nyayasetu"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://nyaya:nyaya@postgres:5432/nyayasetu
+      CHROMA_PERSIST_DIR: /app/chroma_data
+      UPLOAD_DIR: /app/uploads
+      FRONTEND_ORIGIN: http://localhost:5173
+    ports: ["8000:8000"]
+    volumes: ["backend_data:/app"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+  frontend:
+    build: ./frontend
+    environment:
+      VITE_API_URL: http://localhost:8000/api
+    ports: ["5173:5173"]
+    depends_on: [backend]
+volumes:
+  pgdata:
+  backend_data:
